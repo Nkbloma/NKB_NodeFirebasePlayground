@@ -1,0 +1,23 @@
+{
+  "name": "nodefirebase",
+  "version": "1.0.0",
+  "description": "This is here to help understand Firebase with Node",
+  "main": "program.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nick B",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "express-formidable": "^1.2.0",
+    "firebase": "^7.14.0",
+    "firebase-admin": "^8.10.0",
+    "firebase-functions": "^3.6.0",
+    "firebase-tools": "^8.0.2",
+    "multer": "^1.4.2",
+    "prompt": "^1.0.0",
+    "pug": "^2.0.4",
+    "readline": "^1.3.0"
+  }
+}
