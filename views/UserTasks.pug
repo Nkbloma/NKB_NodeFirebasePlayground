@@ -3,7 +3,7 @@ html
     head
     h1 Tasks
     body
-        h3(style="color:#CC1100") #{messages}
+        h3(style="color:#CC1100") #{flash_messages}
         h2 Signed in as: #{LoggedInEmail}
         form(action="/SignedOutSubmit" method='POST')
             button.btn.btn-primary() Sign out

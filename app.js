@@ -1,4 +1,3 @@
-const admin = require("firebase-admin");
 const express = require('express');
 const firebase = require("firebase");
 const config = require('./config.js');
@@ -7,140 +6,132 @@ const session = require('express-session')
 
 const server = express();
 
-server.use(express.urlencoded({extended:false}))
-server.use(express.json())
-server.use(session({
-  cookie: {maxAge: 60000},
-  saveUninitialized: true,
-  resave: 'true',
-  secret: 'key'
-}))
-server.use(flash())
+server.use(express.urlencoded({extended:false})) //Middleware to convert form requests into strings and arrays.
+server.use(express.json())                       //Middleware to convert form requests into JSON.
+server.use(session(config.sessionConfig))        //Configures a cookie session for flash messages.
+server.use(flash())                              //Initalizes the app for flash messages.
 
+server.set('view engine', 'pug');               //Sets Pug as template engine.
 
-
-server.set('view engine', 'pug');
-
-//'Mb0206982!'
 firebase.initializeApp(config.firebaseConfig)
+const Auth = firebase.auth();
 const db = firebase.firestore();
 const TaskCollection = db.collection('UserCollection')
 
+
 server.get('/home', (req, res) => {
-    res.render('PugForms', {messages: req.flash('info')})
+    res.render('HomeForms', {flash_messages: req.flash('info')})
 })
 
-//Redirect exists.. *facepalm*
+server.get(`/users/:userid`, (req, res) =>{
+    var getCurrentUser = Auth.currentUser
+    var getDocQuery= TaskCollection.where('email', '==', getCurrentUser.email);
+    getUsersTasks(getCurrentUser, getDocQuery, req, res);
+})
+
 server.post('/SignedOutSubmit', (req, res) =>{
-  var loggedOutEmail = firebase.auth().currentUser.email
-  firebase.auth().signOut();
-  console.log(`Signing out as ${loggedOutEmail}`)
-  req.flash('info', `User ${loggedOutEmail} signed out.`);
-  res.redirect("/home")  
+    var loggedOutEmail = Auth.currentUser.email
+    Auth.signOut();
+    req.flash('info', `User ${loggedOutEmail} signed out.`);
+    res.redirect("/home")  
 });
 
 server.post('/NewUserSubmit', (req, res) =>{
-  newUserEmail = req.body.newEmail,
-  newUserPassword = req.body.newPassword
-  firebase.auth().createUserWithEmailAndPassword(newUserEmail, newUserPassword)
-    .then(() => {
-      let newUserDoc = TaskCollection.add({
-        email: newUserEmail,
-        Tasks: []
-      })
-      console.log("Created new Doc: " + newUserDoc)
-      req.flash('info', `User ${newUserEmail} created.`);
-      res.redirect('/home')
-    })
-    .catch((error) => {
-      req.flash('info', `${error}`);
-      res.redirect('/home')
-    })
+    var newUserEmail = req.body.newEmail;
+    var newUserPassword = req.body.newPassword;
+    createNewUser(newUserEmail, newUserPassword, req, res);
 })
 
 server.post(`/users`, (req, res) =>{
-  const email = req.body.useremail;
-  const password = req.body.password;
-  firebase.auth().signInWithEmailAndPassword(email, password)
+    const email = req.body.useremail;
+    const password = req.body.password;
+    signInUser(email, password, req, res);
+})
+
+server.post("/EnterNewTask", (req, res)=>{
+    enterNewTask(req, res);
+})
+
+server.listen(9000);
+
+
+var signInUser = (userEmail, userPassword, req, res) => {
+  Auth.signInWithEmailAndPassword(userEmail, userPassword)
     .then(function(){
-      console.log(`Signed in with ${firebase.auth().currentUser.email}`)
-      res.redirect(`users/${firebase.auth().currentUser.uid}`)
+      res.redirect(`users/${Auth.currentUser.uid}`)
     })
     .catch((error) =>{
       req.flash('info', `${error}`);
       res.redirect('/home')
     })
-})
+}
 
-server.get(`/users/:userid`, (req, res) =>{
-  let getCollection = db.collection('UserCollection');
-  let queryWhere = getCollection.where('email', '==', firebase.auth().currentUser.email);
-  var queriedTasks;
-
-  queryWhere.get()
-    .then(snapshot => {
-      if(snapshot.empty){
-        console.log('None')
-      }
-      snapshot.forEach(doc => {
-        queriedTasks = doc.data().Tasks
-      })
-      res.render('UserTasks', {
-        LoggedInEmail: firebase.auth().currentUser.email,
-        taskList: queriedTasks,
-        messages: req.flash('info')
-      })
+var createNewUser = (newEmail, newPassword, req, res) => {
+  Auth.createUserWithEmailAndPassword(newEmail, newPassword)
+  .then(() => {
+    var newUserDoc = TaskCollection.add({
+      email: newEmail,
+      Tasks: []
     })
-    .catch(err => {
-      console.log('Error getting documents', err);
-      });
-    
-})
+    req.flash('info', `User ${newEmail} created.`);
+    res.redirect('/home')
+  })
+  .catch((error) => {
+    req.flash('info', `${error}`);
+    res.redirect('/home')
+  })
+}
 
-server.post("/EnterNewTask", (req, res)=>{
+var getUsersTasks = (currentUser, docQuery, req, res) => {
+  docQuery.get()
+  .then(snapshot => {
+    if(snapshot.empty){
+      req.flash('error', `User ${currentUser.email} has not been registered in database.`);
+      res.render('UserTasks', {
+        LoggedInEmail: currentUser.email,
+        flash_messages: req.flash('error')
+      })
+    }
+    snapshot.forEach(userDoc => {
+      currentUsersTasks = userDoc.data().Tasks
+    })
+    res.render('UserTasks', {
+      LoggedInEmail: currentUser.email,
+      taskList: currentUsersTasks,
+      flash_messages: req.flash('info')
+    })
+  })
+  .catch(error => {
+    req.flash('error', `${error}`);
+    res.render('UserTasks', {
+      LoggedInEmail: currentUser.email,
+      flash_messages: req.flash('error')
+    })
+  }); 
+}
+
+var enterNewTask = (req, res) =>{
   var documentID;
-  let userDoc1 = TaskCollection.where('email', '==', firebase.auth().currentUser.email).get()
+  TaskCollection.where('email', '==', Auth.currentUser.email).get()
     .then(snapshot => {
       if(snapshot.empty){
-        console.log('None')
+        req.flash('error', `User ${Auth.currentUser.email} has not been registered in database.`);
+        res.render('UserTasks', {
+          LoggedInEmail: currentUser.email,
+          flash_messages: req.flash('error')
+        })
       }
       snapshot.forEach(doc => {
         documentID = doc.id
-        console.log(documentID);
       })
-      var userDoc2 = TaskCollection.doc(documentID)
-      var taskUnion = userDoc2.update({
+      var getUserDocument = TaskCollection.doc(documentID)
+      var taskUnion = getUserDocument.update({
         Tasks: firebase.firestore.FieldValue.arrayUnion(req.body.newtask)
       })
       req.flash('info', 'Task added');
-      res.redirect(`/users/${firebase.auth().currentUser.uid}`)
+      res.redirect(`/users/${Auth.currentUser.uid}`)
     })
     .catch(err => {
-      console.log('Error getting documents', err);
-      });
-})
-server.post("/ListTask", (req, res)=>{
-
-})
-
-server.listen(9000);
-
-/*let getCollection = db.collection('UserCollection');
-let queryWhere = getCollection.where('email', '==', 'maingo@hotmail.com');
-queryWhere.get()
-  .then(snapshot => {
-    if(snapshot.empty){
-      console.log('None')
-      return;
-    }
-    snapshot.forEach(doc => {
-      datas = doc.data()
-      console.log(datas.Tasks[0]);
-      
-    })
-  })
-  .catch(err => {
-    console.log('Error getting documents', err);
+      console.log('Error adding task', err);
     });
-
-  */
+}
