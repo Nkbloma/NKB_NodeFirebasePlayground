@@ -24,6 +24,7 @@ server.set('view engine', 'pug');
 //'Mb0206982!'
 firebase.initializeApp(config.firebaseConfig)
 const db = firebase.firestore();
+const TaskCollection = db.collection('UserCollection')
 
 server.get('/home', (req, res) => {
     res.render('PugForms', {messages: req.flash('info')})
@@ -43,6 +44,11 @@ server.post('/NewUserSubmit', (req, res) =>{
   newUserPassword = req.body.newPassword
   firebase.auth().createUserWithEmailAndPassword(newUserEmail, newUserPassword)
     .then(() => {
+      let newUserDoc = TaskCollection.add({
+        email: newUserEmail,
+        Tasks: []
+      })
+      console.log("Created new Doc: " + newUserDoc)
       req.flash('info', `User ${newUserEmail} created.`);
       res.redirect('/home')
     })
@@ -67,8 +73,54 @@ server.post(`/users`, (req, res) =>{
 })
 
 server.get(`/users/:userid`, (req, res) =>{
-    res.render('UserTasks', {LoggedInEmail: firebase.auth().currentUser.email})
+  let getCollection = db.collection('UserCollection');
+  let queryWhere = getCollection.where('email', '==', firebase.auth().currentUser.email);
+  var queriedTasks;
+
+  queryWhere.get()
+    .then(snapshot => {
+      if(snapshot.empty){
+        console.log('None')
+      }
+      snapshot.forEach(doc => {
+        queriedTasks = doc.data().Tasks
+      })
+      res.render('UserTasks', {
+        LoggedInEmail: firebase.auth().currentUser.email,
+        taskList: queriedTasks,
+        messages: req.flash('info')
+      })
+    })
+    .catch(err => {
+      console.log('Error getting documents', err);
+      });
     
+})
+
+server.post("/EnterNewTask", (req, res)=>{
+  var documentID;
+  let userDoc1 = TaskCollection.where('email', '==', firebase.auth().currentUser.email).get()
+    .then(snapshot => {
+      if(snapshot.empty){
+        console.log('None')
+      }
+      snapshot.forEach(doc => {
+        documentID = doc.id
+        console.log(documentID);
+      })
+      var userDoc2 = TaskCollection.doc(documentID)
+      var taskUnion = userDoc2.update({
+        Tasks: firebase.firestore.FieldValue.arrayUnion(req.body.newtask)
+      })
+      req.flash('info', 'Task added');
+      res.redirect(`/users/${firebase.auth().currentUser.uid}`)
+    })
+    .catch(err => {
+      console.log('Error getting documents', err);
+      });
+})
+server.post("/ListTask", (req, res)=>{
+
 })
 
 server.listen(9000);
