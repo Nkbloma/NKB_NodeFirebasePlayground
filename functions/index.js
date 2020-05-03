@@ -11,7 +11,7 @@ const session = require('express-session')
   server.use(express.urlencoded({extended:false})) //Middleware to convert form requests into strings and arrays.
   server.use(express.json())                       //Middleware to convert form requests into JSON.
   server.use(session(config.sessionConfig))        //Configures a cookie session for flash messages.
-  server.use(flash())                              //Initalizes the app for flash messages.
+  server.use(flash())                               //Initalizes the app for flash messages.
   server.use(function(req, res, next){
     res.locals.info_message = req.flash('info');
     next();
@@ -83,6 +83,7 @@ const session = require('express-session')
         Tasks: []
       })
       req.flash('info', `User ${newEmail} created.`);
+      flashDesign = "New user created";
       res.redirect('/home')
     })
     .catch((error) => {
