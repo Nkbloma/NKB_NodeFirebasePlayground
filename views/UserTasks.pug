@@ -1,0 +1,26 @@
+doctype html
+html
+    head
+    h1 Tasks
+    body
+        h3(style="color:#CC1100") #{flash_messages}
+        h2 Signed in as: #{LoggedInEmail}
+        form(action="/SignedOutSubmit" method='POST')
+            button.btn.btn-primary() Sign out
+        br
+        br
+        form(action="/EnterNewTask" method='POST')
+            label(for='newtask') New Task:
+            |
+            |
+            input(type="text", name='newtask')
+            |
+            |
+            button.btn.btn-primary(type='submit') Submit Task
+        br
+        br
+        
+        h3 List Tasks
+        ul(style='list-style-type:decimal')
+            each task in taskList
+                li= task

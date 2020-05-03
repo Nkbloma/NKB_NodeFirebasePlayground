@@ -1,0 +1,30 @@
+doctype html
+html
+    head
+    body
+    h3(style="color:#CC1100") #{flash_messages}
+        h2 Sign In Form
+        form(name="LoginForm" method='POST' action="/users")
+           
+            label(for='useremail') UserEmail:
+            input(type="email", name='useremail')
+            br
+            br
+            label(for='password') Password:
+            input(name = "password" type='password')
+            br
+            br
+            button.btn.btn-primary(type='submit') Login
+            
+            
+        h2 Sign Up Form
+        form(name="SignUpForm" method='POST' action='/NewUserSubmit')      
+            label(for='newEmail') Username:
+            input(type="email", name='newEmail')
+            br
+            br
+            label(for='newPassword') Password:
+            input(name = "newPassword" type='password')
+            br
+            br
+            button.btn.btn-primary(type='submit') Sign Up
