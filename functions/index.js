@@ -83,7 +83,6 @@ const session = require('express-session')
         Tasks: []
       })
       req.flash('info', `User ${newEmail} created.`);
-      flashDesign = "New user created";
       res.redirect('/home')
     })
     .catch((error) => {
