@@ -9,7 +9,7 @@
   "author": "Nick B",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "express-flash": "0.0.2",
     "express-formidable": "^1.2.0",
     "express-session": "^1.17.0",
